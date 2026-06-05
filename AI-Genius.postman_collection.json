@@ -1,0 +1,216 @@
+{
+  "info": {
+    "name": "AI-Genius – JWT Auth & RBAC",
+    "_postman_id": "ai-genius-collection-v1",
+    "description": "Full workflow: Login → Access Protected API → Token Expires → Refresh Token → Access Denied on unauthorized roles",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",     "value": "http://localhost:3000", "type": "string" },
+    { "key": "accessToken", "value": "",                      "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0 – API Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/", "host": ["{{baseUrl}}"], "path": [""] }
+      }
+    },
+    {
+      "name": "── AUTH ──",
+      "item": [
+        {
+          "name": "1 – Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  console.log('✅ Access token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@aigenius.com\",\n  \"password\": \"Admin@1234\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }
+          }
+        },
+        {
+          "name": "2 – Login as Premium User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  console.log('✅ Premium access token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"premium@aigenius.com\",\n  \"password\": \"Premium@1234\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }
+          }
+        },
+        {
+          "name": "3 – Login as Free User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"free@aigenius.com\",\n  \"password\": \"Free@1234\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }
+          }
+        },
+        {
+          "name": "4 – Login FAIL (wrong password)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@aigenius.com\",\n  \"password\": \"wrongpassword\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }
+          }
+        },
+        {
+          "name": "5 – Silent Refresh (uses httpOnly cookie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  console.log('✅ New access token saved after refresh');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api","auth","refresh"] },
+            "description": "Cookie is sent automatically by Postman if login was made in same session"
+          }
+        },
+        {
+          "name": "6 – Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api","auth","logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "── AI ENDPOINTS ──",
+      "item": [
+        {
+          "name": "7 – Free Model (any logged-in user) ✅",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/ai/free-model", "host": ["{{baseUrl}}"], "path": ["api","ai","free-model"] }
+          }
+        },
+        {
+          "name": "8 – Premium Model (Premium/Admin only) ✅",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Write a haiku about machine learning\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/ai/premium-model", "host": ["{{baseUrl}}"], "path": ["api","ai","premium-model"] }
+          }
+        },
+        {
+          "name": "9 – Purge Cache (Admin only) ✅",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/ai/purge-cache", "host": ["{{baseUrl}}"], "path": ["api","ai","purge-cache"] }
+          }
+        },
+        {
+          "name": "10 – Free User tries Premium → 403 FORBIDDEN ❌",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "description": "Log in as Free User first" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"prompt\": \"test\" }" },
+            "url": { "raw": "{{baseUrl}}/api/ai/premium-model", "host": ["{{baseUrl}}"], "path": ["api","ai","premium-model"] },
+            "description": "Login as free@aigenius.com first, copy its accessToken here to get 403"
+          }
+        },
+        {
+          "name": "11 – No Token → 401 UNAUTHORIZED ❌",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/ai/free-model", "host": ["{{baseUrl}}"], "path": ["api","ai","free-model"] }
+          }
+        },
+        {
+          "name": "12 – Expired/Malformed Token → 401 ❌",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer this.is.an.invalid.token" }],
+            "url": { "raw": "{{baseUrl}}/api/ai/free-model", "host": ["{{baseUrl}}"], "path": ["api","ai","free-model"] }
+          }
+        }
+      ]
+    }
+  ]
+}
